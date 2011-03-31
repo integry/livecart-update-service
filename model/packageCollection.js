@@ -3,6 +3,7 @@ exports.collection = function()
 	this.loadReleasePackages();
 	this.loadUpdatePackages();
 	this.buildUpdateTree();
+	this.getFreePackages();
 
 	// caches
 	this.initialVersion = {};
@@ -85,6 +86,7 @@ exports.collection.prototype =
 
 	buildUpdateTree: function()
 	{
+		/*
 		for (var name in this.updates)
 		{
 			for (var toVersion in this.updates[name])
@@ -111,6 +113,49 @@ exports.collection.prototype =
 				}
 			}
 		}
+		*/
+	},
+
+	getFreePackages: function()
+	{
+		var that = this;
+		this.freePackages = [];
+		var mysql = require('../helper/util.js').mysql();
+
+		mysql.connect(function(err, results)
+		{
+			if (err)
+			{
+				mysql.end();
+				throw err;
+			}
+
+			mysql.query("SELECT lft, rgt FROM Category WHERE Category.ID = ?", [MODULE_CATEGORY_ID],
+			function(err, results, fields)
+			{
+				var row = results[0];
+
+				mysql.query("SELECT identifier.value From Product " +
+							"LEFT JOIN Category ON Product.categoryID=Category.ID " +
+							"LEFT JOIN SpecificationStringValue AS identifier ON identifier.productID=Product.ID AND identifier.specFieldID=? " +
+							"LEFT JOIN SpecificationItem AS licensable ON licensable.productID=Product.ID AND licensable.specFieldValueID=? " +
+							"WHERE lft >= ? AND rgt <= ? AND licensable.specFieldValueID IS NULL", [IDENTIFIER_FIELD_ID, LICENSABLE_VALUE_ID, row.lft, row.rgt],
+				function(err, results, fields)
+				{
+					results.forEach(function(row)
+					{
+						var match = row.value.match(/"en"(.*)\:"(.*?)"/);
+						if (match)
+						{
+							that.freePackages.push(match[3]);
+						}
+					});
+
+					mysql.end();
+				});
+			});
+
+		});
 	},
 
 	getPackageByName: function(name)
@@ -274,8 +319,8 @@ exports.collection.prototype =
 		}
 	},
 
-	getFreePackages: function()
+	isFreePackage: function(name)
 	{
-
+		return this.freePackages.indexOf(name) > -1;
 	}
 }

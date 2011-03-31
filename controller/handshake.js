@@ -1,11 +1,10 @@
 exports.index = function(env)
 {
 	var domain = fc.getQueryVar(env, 'domain');
-	domain = domain.match(/[\.-a-zA-Z0-9]/);
 
 	if (!domain)
 	{
-		return fc.statusResponse(501, 'Domain name missing')
+		return fc.statusResponse(env, 403, 'Domain name missing')
 	}
 
 	require('dns').resolve4(domain,
@@ -15,25 +14,36 @@ exports.index = function(env)
 			{
 				if (err || (-1 == ips.indexOf(env.request.connection.remoteAddress)))
 				{
-					return fc.statusResponse(501, 'Domain name does not match request IP address')
+					return fc.statusResponse(env, 403, 'Domain name does not match request IP address')
 				}
 			}
 
-			var mysql = require('./helper/util').mysql;
+			var mysql = require('helper/util.js').mysql();
 			mysql.connect(function(err, results)
+			{
+				if (err)
 				{
-					if (err)
+					throw err;
+				}
+
+				mysql.query("SELECT * From OrderedItemOption WHERE optionText LIKE ?", ['%' + domain],
+					function(err, results, fields)
 					{
-						throw err;
-					}
-
-					mysql.query("SELECT * From OrderedItemOption WHERE optionText LIKE '%" + domain + "%'",
-						function(err, results, fields)
+						if (!results.length)
 						{
-							console.log(results);
+							return fc.statusResponse(env, 403, 'There is no license with "' + domain + '" as the registered domain name');
+						}
 
-							var allowedPackages = ['livecart'];
-						});
-				});
+						var allowedPackages = ['livecart'];
+
+						var cipher = require('crypto').createCipher('aes-256-cbc', HANDSHAKE_KEY + domain);
+						var crypted = cipher.update(JSON.stringify(allowedPackages), 'utf8', 'hex');
+						crypted += cipher.final('hex')
+
+						var response = { packages: allowedPackages, handshake: crypted, status: 'ok' }
+
+						fc.statusResponse(env, 200, JSON.stringify(response));
+					});
+			});
 		});
 }

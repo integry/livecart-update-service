@@ -18,6 +18,8 @@ frontController.prototype =
 {
 	process: function(req, res)
 	{
+		req.on('end', function() {  });
+
 		var env = {response: res, request: req}
 
 		req.parsed = require('url').parse(req.url, true);
@@ -33,6 +35,7 @@ frontController.prototype =
 		{
 			console.log(e);
 			var response = { status: 404, msg: 'Invalid request' }
+			throw e;
 		}
 
 		if (response)
@@ -61,6 +64,8 @@ frontController.prototype =
 	}
 }
 
-var fc = new frontController();
+fc = new frontController();
 require('http').createServer(fc.process.bind(fc)).listen(PORT, HOST);
 require('sys').puts("Server at http://" + HOST + ':' + PORT.toString() + '/');
+
+exports.fc = frontController;
