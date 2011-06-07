@@ -435,7 +435,7 @@ exports.collection.prototype =
 			{
 				var pkg = pkgs[v];
 				var newest = this.newestVersions[name][pkg.line];
-				if (!newest || (newest.ctimeStamp < pkg.ctimeStamp))
+				if (!newest || (newest.fileStat.ctimeStamp < pkg.fileStat.ctimeStamp))
 				{
 					n[pkg.line] = pkg;
 				}
@@ -459,7 +459,7 @@ exports.collection.prototype =
 		var newest = null;
 		for (var k in array)
 		{
-			if (!newest || (array[k].ctimeStamp > newest.ctimeStamp))
+			if (!newest || (array[k].fileStat.ctimeStamp > newest.fileStat.ctimeStamp))
 			{
 				newest = array[k];
 			}
