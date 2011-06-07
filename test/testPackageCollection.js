@@ -54,6 +54,14 @@ module.exports = require('nodeunit').testCase(
 		test.equal(path[1].to, '1.0.1');
 
 		test.done();
+	},
+
+	testNewestVersion: function(test)
+	{
+		test.equal(this.packages.getNewestVersion('test').version, '1.0.2');
+		test.equal(this.packages.getNewestVersion('test', 'stable').version, '1.0.0.1');
+		test.equal(this.packages.getNewestVersion('test', 'non-existing'), false);
+		test.done();
 	}
 
 

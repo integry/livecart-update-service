@@ -18,7 +18,7 @@ exports.index = function(env)
 				}
 			}
 
-			var mysql = require('helper/util.js').mysql();
+			var mysql = require('../helper/util.js').mysql();
 			mysql.connect(function(err, results)
 			{
 				if (err)
@@ -34,13 +34,27 @@ exports.index = function(env)
 							return fc.statusResponse(env, 403, 'There is no license with "' + domain + '" as the registered domain name');
 						}
 
-						var allowedPackages = ['livecart'];
+						var pc = fc.getPackages();
+						var allowedPackages = pc.getFreePackages();
+						allowedPackages.push('livecart');
+
+						var packageDetails = {}
+						allowedPackages.forEach(function(pkg)
+						{
+							var packageInfo = {};
+							pc.getPackageChannels(pkg).forEach(function(channel)
+							{
+								packageInfo[channel] = pc.getPackageByName(pkg, channel);
+							});
+
+							packageDetails[pkg] = packageInfo;
+						}.bind(this));
 
 						var cipher = require('crypto').createCipher('aes-256-cbc', HANDSHAKE_KEY + domain);
 						var crypted = cipher.update(JSON.stringify(allowedPackages), 'utf8', 'hex');
 						crypted += cipher.final('hex')
 
-						var response = { packages: allowedPackages, handshake: crypted, status: 'ok' }
+						var response = { packages: packageDetails, handshake: crypted, status: 'ok' }
 
 						fc.statusResponse(env, 200, JSON.stringify(response));
 					});

@@ -1,12 +1,14 @@
 exports.collection = function()
 {
+	this.freePackages = [];
+
 	this.loadReleasePackages();
 	this.loadUpdatePackages();
-	this.buildUpdateTree();
-	this.getFreePackages();
+	this.loadFreePackages();
 
 	// caches
 	this.initialVersion = {};
+	this.newestVersions = {};
 }
 
 exports.collection.prototype =
@@ -38,7 +40,9 @@ exports.collection.prototype =
 		fs.readdirSync(dir).forEach(function(name)
 		{
 			var pkgDir = dir + name;
-			fs.readdirSync(pkgDir).forEach(function(file)
+			var files = fs.readdirSync(pkgDir);
+			files.sort();
+			files.forEach(function(file)
 			{
 				fileCallback({relPath: file, path:  pkgDir + '/' + file});
 			});
@@ -60,6 +64,25 @@ exports.collection.prototype =
 			this.packages[name] = {};
 		}
 
+		if (!versionMeta.line)
+		{
+			versionMeta.line = 'current';
+		}
+
+		versionMeta.fileStat = require('fs').statSync(file.path);
+		versionMeta.fileStat.ctimeStamp = Date.parse(versionMeta.fileStat.ctime) / 1000;
+
+		versionMeta.tplDir = PKG_ROOT + '/templates/' + name + '/' + versionMeta.version;
+		versionMeta.tplFiles = require('fs').readFileSync(versionMeta.tplDir + '/.list', 'UTF-8').split(/\n/).filter(function(el) { if (el) { return true; }});
+
+		if (versionMeta.free)
+		{
+			if (!this.isFreePackage(name))
+			{
+				this.freePackages.push(name);
+			}
+		}
+
 		this.packages[name][versionMeta.version] = versionMeta;
 	},
 
@@ -76,52 +99,29 @@ exports.collection.prototype =
 				line: parts[2],
 				from: parts[4],
 				to: parts[5],
-				type: parts[3]
+				type: parts[3],
+				fileStat: require('fs').statSync(file.path),
+				file: file.path
 				}
+
+		updateMeta.fileStat.ctimeStamp = Date.parse(updateMeta.fileStat.ctime) / 1000;
 
 		this.updates[updateMeta.package] = this.updates[updateMeta.package] || {};
 		this.updates[updateMeta.package][updateMeta.to] = this.updates[updateMeta.package][updateMeta.to] || [];
 		this.updates[updateMeta.package][updateMeta.to].push(updateMeta);
 	},
 
-	buildUpdateTree: function()
-	{
-		/*
-		for (var name in this.updates)
-		{
-			for (var toVersion in this.updates[name])
-			{
-				for (var i in this.updates[name][toVersion])
-				{
-					var meta = this.updates[name][toVersion][i];
-					if (this.updates[name][meta.from])
-					{
-						var from = this.updates[name][meta.from];
-						for (var f in from)
-						{
-							from[f]['nextUpdates'] = from[f]['nextUpdates'] || []
-							from[f]['nextUpdates'].push(meta);
-						}
-					}
-
-					var fromPackage = this.packages[name][meta.from];
-					if (fromPackage)
-					{
-						fromPackage['updates'] = fromPackage['updates'] || [];
-						fromPackage['updates'].push(meta);
-					}
-				}
-			}
-		}
-		*/
-	},
-
-	getFreePackages: function()
+	loadFreePackages: function()
 	{
 		var that = this;
-		this.freePackages = [];
-		var mysql = require('../helper/util.js').mysql();
+		for (var name in this.packages)
+		{
+			var pkg = this.packages[name];
+			this.packages[name]
+		};
 
+		// determine which modules are free from product database
+		var mysql = require('../helper/util.js').mysql();
 		mysql.connect(function(err, results)
 		{
 			if (err)
@@ -147,7 +147,7 @@ exports.collection.prototype =
 						var match = row.value.match(/"en"(.*)\:"(.*?)"/);
 						if (match)
 						{
-							that.freePackages.push(match[3]);
+							that.freePackages.push(match[2]);
 						}
 					});
 
@@ -158,24 +158,79 @@ exports.collection.prototype =
 		});
 	},
 
+	getRelease: function(name, version)
+	{
+		return (this.packages[name] || {})[version];
+	},
+
+	getFreePackages: function()
+	{
+		return this.freePackages;
+	},
+
 	getPackageByName: function(name)
 	{
+		return this.getNewestVersion(name);
+	},
 
+	getPackageChannels: function(name)
+	{
+		if (!this.packages[name])
+		{
+			return [];
+		}
+
+		var channels = [];
+		for (var version in this.packages[name])
+		{
+			var channel = this.packages[name][version].line;
+			if (channels.indexOf(channel) < 0)
+			{
+				channels.push(channel);
+			}
+		};
+
+		return channels;
+	},
+
+	getPackageVersions: function(name, channel)
+	{
+		if (!this.packages[name])
+		{
+			return [];
+		}
+
+		var versions = [];
+		for (var version in this.packages[name])
+		{
+			if ((this.packages[name][version].line) == channel)
+			{
+				versions.push(this.packages[name][version]);
+			}
+		};
+
+		return versions;
 	},
 
 	getUpdatePackages: function(name)
 	{
-
+		return this.updates[name];
 	},
 
-	getAvailablePackages: function()
+	getUpdatePackage: function(name, from, to)
 	{
-
-	},
-
-	getNewestVersion: function(name, channel)
-	{
-
+		var packages = this.getUpdatePackages(name);
+		for (var v in packages)
+		{
+			for (var f = 0; f < packages[v].length; f++)
+			{
+				var p = packages[v][f];
+				if ((p.from == from) && (p.to == to))
+				{
+					return p;
+				}
+			}
+		}
 	},
 
 	getUpdatePath: function(name, fromVersion, toVersion)
@@ -204,11 +259,12 @@ exports.collection.prototype =
 		var branch = this.packages[name][fromVersion].line || 'current';
 		var package = updates[toVersion];
 		var packages = [];
+
 		while (package)
 		{
+			var prefered = null
 			for (var p in package)
 			{
-				var prefered = null
 				var pkg = package[p];
 				if (pkg.type == (isUpdate ? 'update' : 'downgrade'))
 				{
@@ -233,13 +289,43 @@ exports.collection.prototype =
 			}
 		}
 
+		// usually the update path starts via downgrade package, so this needs to be discarded
+		if (packages[1] && (packages[1].from == fromVersion))
+		{
+			delete packages[0];
+
+			// reindex
+			packages = packages.filter(function() { return true; });
+		}
+
 		// no/incomplete update path
-		if (packages && (packages[0].from != fromVersion))
+		if (packages[0] && (packages[0].from != fromVersion))
 		{
 			return false;
 		}
 
 		return packages;
+	},
+
+	/*
+	 *  Strip private information from package data before returning it to client
+	 */
+	getClientPkgData: function(packages)
+	{
+		var ret = [];
+		var keys = ['package', 'line', 'from', 'to', 'type'];
+		for (var k = 0; k < packages.length; k++)
+		{
+			var p = {};
+			for (var key = 0; key < keys.length; key++)
+			{
+				p[keys[key]] = packages[k][keys[key]];
+			}
+
+			ret.push(p);
+		}
+
+		return ret;
 	},
 
 	/* determine if update or downgrade path is requested
@@ -268,9 +354,21 @@ exports.collection.prototype =
 		var firstPath = this.getUpdatePath(name, rootVersion, firstVersion);
 		var secondPath = this.getUpdatePath(name, rootVersion, secondVersion);
 
+		if (!firstPath.length || !secondPath.length)
+		{
+			return false;
+		}
+
+		if (secondPath.length > firstPath.length)
+		{
+			var fp = firstPath;
+			firstPath = secondPath;
+			secondPath = fp;
+		}
+
 		for (var v in firstPath)
 		{
-			if (firstPath[v].to != secondPath[v].to)
+			if (!secondPath[v] || (firstPath[v].to != secondPath[v].to))
 			{
 				return firstPath[v].from;
 			}
@@ -317,6 +415,57 @@ exports.collection.prototype =
 				}
 			}
 		}
+	},
+
+	/* Newest version cannot be updated from */
+	getNewestVersion: function(name, channel)
+	{
+		var pkgs = this.packages[name];
+		if (!pkgs)
+		{
+			return false;
+		}
+
+		this.newestVersions[name] = this.newestVersions[name] || {};
+		var n = this.newestVersions[name];
+
+		if (!n.current)
+		{
+			for (var v in pkgs)
+			{
+				var pkg = pkgs[v];
+				var newest = this.newestVersions[name][pkg.line];
+				if (!newest || (newest.ctimeStamp < pkg.ctimeStamp))
+				{
+					n[pkg.line] = pkg;
+				}
+			}
+		}
+
+		if (channel && n[channel])
+		{
+			return n[channel];
+		}
+		else if (!channel)
+		{
+			return this.findNewestVersion(n);
+		}
+
+		return false;
+	},
+
+	findNewestVersion: function(array)
+	{
+		var newest = null;
+		for (var k in array)
+		{
+			if (!newest || (array[k].ctimeStamp > newest.ctimeStamp))
+			{
+				newest = array[k];
+			}
+		}
+
+		return newest;
 	},
 
 	isFreePackage: function(name)
