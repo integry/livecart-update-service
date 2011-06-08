@@ -114,48 +114,53 @@ exports.collection.prototype =
 	loadFreePackages: function()
 	{
 		var that = this;
-		for (var name in this.packages)
+
+		if (!ALL_PACKAGES_FREE)
 		{
-			var pkg = this.packages[name];
-			this.packages[name]
-		};
-
-		// determine which modules are free from product database
-		var mysql = require('../helper/util.js').mysql();
-		mysql.connect(function(err, results)
-		{
-			if (err)
+			// determine which modules are free from product database
+			var mysql = require('../helper/util.js').mysql();
+			mysql.connect(function(err, results)
 			{
-				mysql.end();
-				throw err;
-			}
+				if (err)
+				{
+					mysql.end();
+					throw err;
+				}
 
-			mysql.query("SELECT lft, rgt FROM Category WHERE Category.ID = ?", [MODULE_CATEGORY_ID],
-			function(err, results, fields)
-			{
-				var row = results[0];
-
-				mysql.query("SELECT identifier.value From Product " +
-							"LEFT JOIN Category ON Product.categoryID=Category.ID " +
-							"LEFT JOIN SpecificationStringValue AS identifier ON identifier.productID=Product.ID AND identifier.specFieldID=? " +
-							"LEFT JOIN SpecificationItem AS licensable ON licensable.productID=Product.ID AND licensable.specFieldValueID=? " +
-							"WHERE lft >= ? AND rgt <= ? AND licensable.specFieldValueID IS NULL", [IDENTIFIER_FIELD_ID, LICENSABLE_VALUE_ID, row.lft, row.rgt],
+				mysql.query("SELECT lft, rgt FROM Category WHERE Category.ID = ?", [MODULE_CATEGORY_ID],
 				function(err, results, fields)
 				{
-					results.forEach(function(row)
+					var row = results[0];
+
+					mysql.query("SELECT identifier.value From Product " +
+								"LEFT JOIN Category ON Product.categoryID=Category.ID " +
+								"LEFT JOIN SpecificationStringValue AS identifier ON identifier.productID=Product.ID AND identifier.specFieldID=? " +
+								"LEFT JOIN SpecificationItem AS licensable ON licensable.productID=Product.ID AND licensable.specFieldValueID=? " +
+								"WHERE lft >= ? AND rgt <= ? AND licensable.specFieldValueID IS NULL", [IDENTIFIER_FIELD_ID, LICENSABLE_VALUE_ID, row.lft, row.rgt],
+					function(err, results, fields)
 					{
-						var match = row.value.match(/"en"(.*)\:"(.*?)"/);
-						if (match)
+						results.forEach(function(row)
 						{
-							that.freePackages.push(match[2]);
-						}
+							var match = row.value.match(/"en"(.*)\:"(.*?)"/);
+							if (match)
+							{
+								that.freePackages.push(match[2]);
+							}
+						});
+
+						mysql.end();
 					});
-
-					mysql.end();
 				});
-			});
 
-		});
+			});
+		}
+		else
+		{
+			for (var name in this.packages)
+			{
+				this.freePackages.push(name);
+			};
+		}
 	},
 
 	getRelease: function(name, version)

@@ -2,9 +2,15 @@ PORT = 8002;
 HOST = '127.0.0.1';
 
 PKG_ROOT = '/tmp/packages';
-DSN = 'mysql://root@localhost/livecart_www';
+
+// encryption key for data exchange
 HANDSHAKE_KEY = 'sdfsdf4343!@#$%ddf4325345sd';
 
+// will read license info from database if true
+ALL_PACKAGES_FREE = false;
+
+// license database info
+DSN = 'mysql://root@localhost/livecart_www';
 MODULE_CATEGORY_ID = 7;
 IDENTIFIER_FIELD_ID = 5;
 LICENSABLE_VALUE_ID = 1;
