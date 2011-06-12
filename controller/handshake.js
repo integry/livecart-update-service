@@ -10,7 +10,7 @@ exports.index = function(env)
 	require('dns').resolve4(domain,
 		function(err, ips)
 		{
-			if ('localhost' != domain)
+			if (('localhost' != domain) && !ALLOW_LOCALHOST_ACCESS)
 			{
 				if (err || (-1 == ips.indexOf(env.request.connection.remoteAddress)))
 				{

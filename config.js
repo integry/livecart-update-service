@@ -9,6 +9,9 @@ HANDSHAKE_KEY = 'sdfsdf4343!@#$%ddf4325345sd';
 // will read license info from database if true
 ALL_PACKAGES_FREE = false;
 
+// always allow access from localhost (for dev/testing purposes)
+ALLOW_LOCALHOST_ACCESS = true;
+
 // license database info
 DSN = 'mysql://root@localhost/livecart_www';
 MODULE_CATEGORY_ID = 7;

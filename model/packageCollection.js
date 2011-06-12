@@ -57,6 +57,13 @@ exports.collection.prototype =
 			versionMeta[k] = versionMeta[k].replace(/\s*$/, '');
 		}
 
+		if (!versionMeta.pkg)
+		{
+			var parts = file.path.split('\/');
+			parts.pop();
+			versionMeta.pkg = parts.pop();
+		}
+
 		var name = versionMeta.pkg;
 
 		if (!this.packages[name])

@@ -37,7 +37,6 @@ frontController.prototype =
 		{
 			console.log(e);
 			var response = { status: 404, msg: 'Invalid request' }
-			throw e;
 		}
 
 		if (response)
