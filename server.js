@@ -37,6 +37,7 @@ frontController.prototype =
 		{
 			console.log(e);
 			var response = { status: 404, msg: 'Invalid request' }
+			throw(e);
 		}
 
 		if (response)
@@ -47,7 +48,7 @@ frontController.prototype =
 
 	statusResponse: function(env, status, message)
 	{
-		this.processResponse(env, { status: status, msg: message });
+		this.processResponse(env, { status: status, msg: message || '' });
 	},
 
 	processResponse: function(env, response)
@@ -75,6 +76,31 @@ frontController.prototype =
 	getPackages: function()
 	{
 		return this.packages;
+	},
+
+	createHandshake: function(packages, domain)
+	{
+		var pc = this.getPackages();
+		var allowedPackages = pc.getFreePackages();
+		allowedPackages.push('livecart');
+
+		var packageDetails = {}
+		allowedPackages.forEach(function(pkg)
+		{
+			var packageInfo = {};
+			pc.getPackageChannels(pkg).forEach(function(channel)
+			{
+				packageInfo[channel] = pc.getPackageByName(pkg, channel);
+			});
+
+			packageDetails[pkg] = packageInfo;
+		}.bind(this));
+
+		var cipher = require('crypto').createCipher('aes-256-cbc', HANDSHAKE_KEY + domain);
+		var crypted = cipher.update(JSON.stringify(allowedPackages), 'utf8', 'hex');
+		crypted += cipher.final('hex')
+
+		return { packages: packageDetails, handshake: crypted, status: 'ok' }
 	},
 
 	getHandshake: function(env)

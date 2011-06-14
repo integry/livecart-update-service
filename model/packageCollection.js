@@ -52,6 +52,8 @@ exports.collection.prototype =
 	registerRelease: function(file, iniParser)
 	{
 		var versionMeta = iniParser.parseSync(file.path).Module;
+		versionMeta.file = file.path.replace(/\/versions\//, '/releases/');;
+
 		for (var k in versionMeta)
 		{
 			versionMeta[k] = versionMeta[k].replace(/\s*$/, '');
@@ -122,7 +124,7 @@ exports.collection.prototype =
 	{
 		var that = this;
 
-		if (!ALL_PACKAGES_FREE)
+		if (!ALL_PACKAGES_FREE && DSN)
 		{
 			// determine which modules are free from product database
 			var mysql = require('../helper/util.js').mysql();
@@ -325,8 +327,8 @@ exports.collection.prototype =
 	getClientPkgData: function(packages)
 	{
 		var ret = [];
-		var keys = ['package', 'line', 'from', 'to', 'type'];
-		for (var k = 0; k < packages.length; k++)
+		var keys = ['package', 'pkg', 'line', 'from', 'to', 'type', 'name', 'description', 'vendor', 'url', 'version'];
+		for (var k in packages)
 		{
 			var p = {};
 			for (var key = 0; key < keys.length; key++)
