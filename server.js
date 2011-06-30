@@ -25,7 +25,7 @@ frontController.prototype =
 
 		this.getHandshake(env);
 
-		var routeParts = req.parsed.pathname.match(/([A-Z0-9a-z]+)/g);
+		var routeParts = req.parsed.pathname.match(/([A-Z0-9a-z]+)/g) || ['index'];
 		var controller = routeParts[0] || 'index';
 		var action = routeParts[1] || 'index';
 
@@ -37,7 +37,7 @@ frontController.prototype =
 		{
 			console.log(e);
 			var response = { status: 404, msg: 'Invalid request' }
-			throw(e);
+			//throw(e);
 		}
 
 		if (response)
