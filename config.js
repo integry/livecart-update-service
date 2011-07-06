@@ -3,6 +3,8 @@ HOST = '127.0.0.1';
 
 PKG_ROOT = '/tmp/packages';
 
+REPO_DESCRIPTION = 'LiveCart module repository';
+
 // encryption key for data exchange
 HANDSHAKE_KEY = 'sdfsdf4343!@#$%ddf4325345sd';
 
