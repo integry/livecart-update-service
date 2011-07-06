@@ -79,7 +79,7 @@ exports.collection.prototype =
 		}
 
 		versionMeta.fileStat = require('fs').statSync(file.path);
-		versionMeta.fileStat.ctimeStamp = Date.parse(versionMeta.fileStat.ctime) / 1000;
+		versionMeta.fileStat.ctimeStamp = Math.max(Date.parse(versionMeta.fileStat.ctime) / 1000, Date.parse(versionMeta.fileStat.mtime) / 1000);
 
 		versionMeta.tplDir = PKG_ROOT + '/templates/' + name + '/' + versionMeta.version;
 		versionMeta.tplFiles = require('fs').readFileSync(versionMeta.tplDir + '/.list', 'UTF-8').split(/\n/).filter(function(el) { if (el) { return true; }});
@@ -113,7 +113,7 @@ exports.collection.prototype =
 				file: file.path
 				}
 
-		updateMeta.fileStat.ctimeStamp = Date.parse(updateMeta.fileStat.ctime) / 1000;
+		updateMeta.fileStat.ctimeStamp = Math.max(Date.parse(updateMeta.fileStat.ctime) / 1000, Date.parse(updateMeta.fileStat.mtime) / 1000);
 
 		this.updates[updateMeta.package] = this.updates[updateMeta.package] || {};
 		this.updates[updateMeta.package][updateMeta.to] = this.updates[updateMeta.package][updateMeta.to] || [];
