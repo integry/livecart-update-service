@@ -14,6 +14,11 @@ exports.index = function(env)
 			{
 				if (('localhost' != domain) && !ALLOW_LOCALHOST_ACCESS)
 				{
+					if (env.request.headers['x-real-ip'])
+					{
+						env.request.connection.remoteAddress = env.request.headers['x-real-ip'];
+					}
+
 					if (err || (-1 == ips.indexOf(env.request.connection.remoteAddress)))
 					{
 						return fc.statusResponse(env, 403, 'Domain name does not match request IP address')

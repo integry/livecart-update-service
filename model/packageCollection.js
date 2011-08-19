@@ -150,7 +150,7 @@ exports.collection.prototype =
 					{
 						results.forEach(function(row)
 						{
-							var match = row.value.match(/"en"(.*)\:"(.*?)"/);
+							var match = row.value ? row.value.match(/"en"(.*)\:"(.*?)"/) : null;
 							if (match)
 							{
 								that.freePackages.push(match[2]);
