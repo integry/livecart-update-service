@@ -33,15 +33,32 @@ exports.index = function(env)
 						throw err;
 					}
 
-					mysql.query("SELECT * From OrderedItemOption WHERE optionText LIKE ?", ['%' + domain],
+					mysql.query("SELECT * FROM OrderedItemOption " +
+								"LEFT JOIN OrderedItem ON OrderedItemOption.orderedItemID=OrderedItem.ID " +
+								"LEFT JOIN Product ON OrderedItem.productID=Product.ID " +
+								"LEFT JOIN SpecificationStringValue AS identifier ON (identifier.productID=Product.ID AND identifier.specFieldID=?) " +
+								"WHERE optionText LIKE ?", [IDENTIFIER_FIELD_ID, '%' + domain + '%'],
 						function(err, results, fields)
 						{
-							if (!results.length)
+							if (err || !results.length)
 							{
+								mysql.end();
 								return fc.statusResponse(env, 403, 'There is no license with "' + domain + '" as the registered domain name');
 							}
 
-							fc.statusResponse(env, 200, JSON.stringify(fc.createHandshake(null, domain)));
+							var packages = [];
+							results.forEach(function(row)
+							{
+								var match = row.value ? row.value.match(/"en"(.*)\:"(.*?)"/) : null;
+								if (match)
+								{
+									packages.push(match[2]);
+								}
+							});
+
+							mysql.end();
+
+							fc.statusResponse(env, 200, JSON.stringify(fc.createHandshake(packages, domain)));
 						});
 				});
 			});

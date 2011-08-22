@@ -95,10 +95,16 @@ exports.list = function(env)
 	var q = fc.getQuery(env);
 	var list = [];
 	var pkg = fc.getPackages();
-	var free = pkg.getFreePackages();
-	for (var i in free)
+	var packages = pkg.getFreePackages();
+
+	if (env.allowedPackages)
 	{
-		var info = pkg.getNewestVersion(free[i]);
+		packages = packages.concat(env.allowedPackages);
+	}
+
+	for (var i in packages)
+	{
+		var info = pkg.getNewestVersion(packages[i]);
 		if (info.pkg)
 		{
 			list.push(info);

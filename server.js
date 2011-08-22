@@ -84,6 +84,11 @@ frontController.prototype =
 		var allowedPackages = pc.getFreePackages();
 		allowedPackages.push('livecart');
 
+		if (packages)
+		{
+			allowedPackages = allowedPackages.concat(packages);
+		}
+
 		var packageDetails = {}
 		allowedPackages.forEach(function(pkg)
 		{
@@ -93,7 +98,11 @@ frontController.prototype =
 				packageInfo[channel] = pc.getPackageByName(pkg, channel);
 			});
 
-			packageDetails[pkg] = packageInfo;
+			// check if object is not empty
+			if ((function() {for(var v in packageInfo){return true;} return false;})())
+			{
+				packageDetails[pkg] = packageInfo;
+			}
 		}.bind(this));
 
 		var cipher = require('crypto').createCipher('aes-256-cbc', HANDSHAKE_KEY + domain);
@@ -111,7 +120,7 @@ frontController.prototype =
 			var decipher = require('crypto').createDecipher('aes-256-cbc', HANDSHAKE_KEY + this.getQueryVar(env, 'domain'));
 			var dec = decipher.update(handshake, 'hex', 'utf8');
 			dec += decipher.final('utf8');
-			env.allowedPackages = dec;
+			env.allowedPackages = JSON.parse(dec);
 		}
 	},
 
